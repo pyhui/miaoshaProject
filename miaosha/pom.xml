@@ -97,7 +97,9 @@
         <executions>
           <execution>
             <id>mybatis generator</id>
-            <phase>package</phase>
+            <!--<phase>package</phase>-->
+            <!-- 该配置可避免maven install或者package时候运行该插件，导致本地mapper重新生成 -->
+            <phase>deploy</phase>
             <goals>
               <goal>generate</goal>
             </goals>
@@ -105,7 +107,7 @@
         </executions>
         <configuration>
           <!--允许移动生成-->
-          <verbose>true</verbose>
+          <verbose>false</verbose>
           <!--允许自动覆盖-->
           <overwrite>false</overwrite>
           <configurationFile>src/main/resources/mybatis-generator.xml</configurationFile>
@@ -118,6 +120,11 @@
           <source>8</source>
           <target>8</target>
         </configuration>
+      </plugin>
+      <!--应用程序部署在云端服务器新增-->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
     </plugins>
   </build>
