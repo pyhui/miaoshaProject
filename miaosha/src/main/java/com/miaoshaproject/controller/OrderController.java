@@ -18,7 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 
 @Controller("order")
 @RequestMapping("/order")
-@CrossOrigin(allowCredentials = "true", allowedHeaders = "*", originPatterns = "*")
+@CrossOrigin(allowCredentials = "true", allowedHeaders = "*",origins = "*")
 public class OrderController extends BaseController {
     @Autowired
     private OrderService orderService;

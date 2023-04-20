@@ -72,7 +72,7 @@
                enableUpdateByExample="false" enableDeleteByExample="false"
                enableSelectByExample="false" selectByExampleQueryId="false"
                enableInsert="true" enableDeleteByPrimaryKey="false" ></table>-->
-        <table tableName="promo" domainObjectName="Promo" enableCountByExample="false"
+        <table tableName="" domainObjectName="" enableCountByExample="false"
                enableUpdateByExample="false" enableDeleteByExample="false"
                enableSelectByExample="false" selectByExampleQueryId="false"
                enableInsert="true" enableDeleteByPrimaryKey="false" ></table>

@@ -1,9 +1,9 @@
 package com.miaoshaproject.service.model;
 
-import org.hibernate.validator.constraints.NotBlank;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 
 public class ItemModel {

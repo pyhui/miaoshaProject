@@ -14,7 +14,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import sun.misc.BASE64Encoder;
+//import sun.misc.BASE64Encoder;
+import org.apache.tomcat.util.codec.binary.Base64;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,7 +28,7 @@ import java.util.Random;
 @Controller("user")
 @RequestMapping("/user")
 //@CrossOrigin
-@CrossOrigin(allowCredentials = "true", allowedHeaders = "*", originPatterns = "*")  //跨域
+@CrossOrigin(allowCredentials = "true", allowedHeaders = "*",origins = "*")  //跨域  , originPatterns = "*"
 public class UserController extends BaseController {
     @Autowired
     private UserService userService;
@@ -56,7 +57,7 @@ public class UserController extends BaseController {
 
         // 解决Google cookie 问题
         //设置samesite=None, httponly,secure等属性
-        ResponseCookie cookie = ResponseCookie.from("JSESSIONID", httpServletRequest.getSession().getId() ) // key & value
+       /* ResponseCookie cookie = ResponseCookie.from("JSESSIONID", httpServletRequest.getSession().getId() ) // key & value
                 .httpOnly(true)       // 禁止js读取
                 .secure(true)     // 在http下也传输
                 .domain("localhost")// 域名
@@ -64,7 +65,7 @@ public class UserController extends BaseController {
                 .maxAge(3600)  // 1个小时后过期
                 .sameSite("None")  // 大多数情况也是不发送第三方 Cookie，但是导航到目标网址的 Get 请求除外
                 .build();
-        httpServletResponse.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        httpServletResponse.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());*/
 
         this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true); //登陆了仍然为null???加了上面的cookie
         this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
@@ -102,9 +103,10 @@ public class UserController extends BaseController {
     public String EncodeByMd5(String str) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         //确定计算方法
         MessageDigest md5 = MessageDigest.getInstance("MD5");
-        BASE64Encoder base64Encoder = new BASE64Encoder();
+        /*BASE64Encoder base64Encoder = new BASE64Encoder();
         //加密字符串
-        String newStr = base64Encoder.encode(md5.digest(str.getBytes("utf-8")));
+        String newStr = base64Encoder.encode(md5.digest(str.getBytes("utf-8")));*/
+        String newStr = Base64.encodeBase64String(md5.digest(str.getBytes("utf-8")));
         return newStr;
     }
 
@@ -119,6 +121,7 @@ public class UserController extends BaseController {
         String optCode = String.valueOf(randonInt);
         // 解决Google cookie 问题
         //设置samesite=None, httponly,secure等属性
+        /*
         ResponseCookie cookie = ResponseCookie.from("JSESSIONID", httpServletRequest.getSession().getId() ) // key & value
                 .httpOnly(true)       // 禁止js读取
                 .secure(true)     // 在http下也传输
@@ -128,7 +131,7 @@ public class UserController extends BaseController {
                 .sameSite("None")  // 大多数情况也是不发送第三方 Cookie，但是导航到目标网址的 Get 请求除外
                 .build();
         httpServletResponse.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
+        */
         //将OTP验证码同对应用户的手机号关联，使用httpsession的方式绑定他的手机号与OTPCODE
         httpServletRequest.getSession().setAttribute(telphone,optCode);
         //将OTP验证码通过短信通道发送给用户，省略
