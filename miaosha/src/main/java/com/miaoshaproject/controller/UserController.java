@@ -9,6 +9,7 @@ import com.miaoshaproject.service.UserService;
 import com.miaoshaproject.service.model.UserModel;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
@@ -23,6 +24,8 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 @Controller("user")
@@ -38,9 +41,12 @@ public class UserController extends BaseController {
     // 并且有ThreadLocal清除的机制。
     @Autowired
     private HttpServletRequest httpServletRequest;
-    //解决谷歌禁用Cookie
+
     @Autowired
-    private HttpServletResponse httpServletResponse;
+    private RedisTemplate redisTemplate;
+    /*//解决谷歌禁用Cookie
+    @Autowired
+    private HttpServletResponse httpServletResponse;*/
 
     //用户登录接口
     @RequestMapping(value = "/login",method = {RequestMethod.POST},consumes = {CONTENT_TYPE_FORMED})
@@ -53,7 +59,6 @@ public class UserController extends BaseController {
         }
         //用户登录服务，用来校验用户登录是否合法   //密码加密
         UserModel userModel = userService.validateLogin(telphone, this.EncodeByMd5(password));
-        //将登陆凭证加入到用户登陆成功的session内
 
         // 解决Google cookie 问题
         //设置samesite=None, httponly,secure等属性
@@ -67,9 +72,18 @@ public class UserController extends BaseController {
                 .build();
         httpServletResponse.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());*/
 
-        this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true); //登陆了仍然为null???加了上面的cookie
-        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);
-        return CommonReturnType.create(null);
+        //将登陆凭证加入到用户登陆成功的session内
+        /*this.httpServletRequest.getSession().setAttribute("IS_LOGIN",true); //登陆了仍然为null???加了上面的cookie
+        this.httpServletRequest.getSession().setAttribute("LOGIN_USER",userModel);*/
+        //修改为若用户登陆验证成功后将登入信息和登陆凭证一起存入redis中
+        //生成登陆凭证token，UUID
+        String uuidToken = UUID.randomUUID().toString();
+        uuidToken = uuidToken.replace("-", "");
+        //建立token和用户登陆状态之间的联系
+        redisTemplate.opsForValue().set(uuidToken,userModel);
+        redisTemplate.expire(uuidToken, 1, TimeUnit.HOURS); //超时时间设置为一个小时
+        //下发token
+        return CommonReturnType.create(uuidToken);
     }
     //用户注册接口
     @RequestMapping(value = "/register",method = {RequestMethod.POST},consumes = {CONTENT_TYPE_FORMED})
