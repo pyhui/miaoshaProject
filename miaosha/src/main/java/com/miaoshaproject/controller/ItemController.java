@@ -3,17 +3,20 @@ package com.miaoshaproject.controller;
 import com.miaoshaproject.controller.viewObject.ItemVO;
 import com.miaoshaproject.error.BusinessException;
 import com.miaoshaproject.response.CommonReturnType;
+import com.miaoshaproject.service.CacheService;
 import com.miaoshaproject.service.ItemService;
 import com.miaoshaproject.service.model.ItemModel;
 import org.joda.time.format.DateTimeFormat;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Controller("item")
@@ -24,6 +27,10 @@ public class ItemController extends BaseController {
     private ItemService itemService;
     @Autowired
     private HttpServletRequest httpServletRequest;
+    @Autowired
+    private RedisTemplate redisTemplate;
+    @Autowired
+    private CacheService cacheService;
 
     //创建商品
     @RequestMapping(value = "/create",method = {RequestMethod.POST},consumes = {CONTENT_TYPE_FORMED})
@@ -53,7 +60,24 @@ public class ItemController extends BaseController {
     @RequestMapping(value = "/get",method = {RequestMethod.GET})
     @ResponseBody
     public CommonReturnType getItem(@RequestParam(name = "id") Integer id) {
-        ItemModel itemModel = itemService.getIemById(id);
+        ItemModel itemModel = null;
+        //先取本地缓存
+        itemModel = (ItemModel) cacheService.getFromCommonCache("item_" + id);
+
+        if (itemModel == null) {
+            //根据商品id到redis内获取
+            itemModel = (ItemModel) redisTemplate.opsForValue().get("item_" + id);
+            //若redis内不存在对应的itemModel,则访问下游service
+            if (itemModel == null) {
+                itemModel = itemService.getIemById(id);
+                //设置itemModel到redis内
+                redisTemplate.opsForValue().set("item_" + id, itemModel);
+                redisTemplate.expire("item_" + id, 10, TimeUnit.MINUTES);
+            }
+            //填充本地缓存
+            cacheService.setCommonCache("item_" + id, itemModel);
+        }
+
         ItemVO itemVO = convertVOFromItemModel(itemModel);
         return CommonReturnType.create(itemVO);
     }
