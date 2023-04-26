@@ -40,11 +40,13 @@ public class OrderServiceImpl implements OrderService {
     public OrderModel createOrder(Integer userId, Integer itemId, Integer promoId, Integer amount) throws BusinessException {
         System.out.println("订单服务===> userId:" + userId + ",itemId:" + itemId + ",amount:" + amount);
         //校验下单状态，下单的商品是否存在，用户是否合法，购买数量是否正确
-        ItemModel itemModel = itemService.getIemById(itemId);
+        //ItemModel itemModel = itemService.getIemById(itemId);
+        ItemModel itemModel = itemService.getItemByIdInCache(itemId); //替换为在缓存中查询
         if (itemModel == null) {
             throw new BusinessException(EmBusinessErr.PARAMETER_VALIDATION_ERROR,"商品信息不存在");
         }
-        UserModel userModel = userService.getUserById(userId);
+        //UserModel userModel = userService.getUserById(userId);
+        UserModel userModel = userService.getUserByIdInCache(userId);
         if (userModel == null) {
             throw new BusinessException(EmBusinessErr.PARAMETER_VALIDATION_ERROR,"用户信息不存在");
         }
