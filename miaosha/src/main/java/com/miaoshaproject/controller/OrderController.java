@@ -4,7 +4,9 @@ import com.miaoshaproject.controller.viewObject.UserVO;
 import com.miaoshaproject.dataobject.Order;
 import com.miaoshaproject.error.BusinessException;
 import com.miaoshaproject.error.EmBusinessErr;
+import com.miaoshaproject.mq.MqProducer;
 import com.miaoshaproject.response.CommonReturnType;
+import com.miaoshaproject.service.ItemService;
 import com.miaoshaproject.service.OrderService;
 import com.miaoshaproject.service.model.OrderModel;
 import com.miaoshaproject.service.model.UserModel;
@@ -27,6 +29,11 @@ public class OrderController extends BaseController {
     private HttpServletRequest httpServletRequest;
     @Autowired
     private RedisTemplate redisTemplate;
+    @Autowired
+    private MqProducer mqProducer;
+    @Autowired
+    private ItemService itemService;
+
     //封装下单请求
     @RequestMapping(value = "/createorder",method = {RequestMethod.POST},consumes = {CONTENT_TYPE_FORMED})
     @ResponseBody
@@ -49,11 +56,21 @@ public class OrderController extends BaseController {
             throw new BusinessException(EmBusinessErr.USER_NOT_LOGIN,"用户未登录，不能下单");
         }
         UserModel login_user = (UserModel) this.httpServletRequest.getSession().getAttribute("LOGIN_USER");*/
-        System.out.println("登录用户信息" + userModel);
 
-        OrderModel orderModel = orderService.createOrder(userModel.getId(), itemId, promoId, amount);
+        //OrderModel orderModel = orderService.createOrder(userModel.getId(), itemId, promoId, amount);
+        //判断库存是否售罄，若对应的key存在，则返回下单失败
+        if (redisTemplate.hasKey("promo_item_stock_invalid_" + itemId)) {
+            throw new BusinessException(EmBusinessErr.STOCK_NOT_ENOUGH);
+        }
+        //加入库存流水init状态
+        String stockLogId = itemService.initStockLog(itemId, amount);
 
-        return CommonReturnType.create(orderModel);  //这里返回前端的price格式应该是BigDecimal
+        //在事务消息中创建订单
+        if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,promoId,amount,stockLogId)) {
+            throw new BusinessException(EmBusinessErr.UNKNOW_ERROR,"下单失败");
+        }
+
+        return CommonReturnType.create(null);
     }
 
 }

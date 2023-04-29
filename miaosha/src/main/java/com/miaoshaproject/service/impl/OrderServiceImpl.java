@@ -3,9 +3,11 @@ package com.miaoshaproject.service.impl;
 import com.miaoshaproject.dao.OrderMapper;
 import com.miaoshaproject.dao.PromoMapper;
 import com.miaoshaproject.dao.SequenceMapper;
+import com.miaoshaproject.dao.StockLogMapper;
 import com.miaoshaproject.dataobject.Order;
 import com.miaoshaproject.dataobject.Promo;
 import com.miaoshaproject.dataobject.Sequence;
+import com.miaoshaproject.dataobject.StockLog;
 import com.miaoshaproject.error.BusinessException;
 import com.miaoshaproject.error.EmBusinessErr;
 import com.miaoshaproject.service.ItemService;
@@ -19,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -34,10 +38,12 @@ public class OrderServiceImpl implements OrderService {
     private OrderMapper orderMapper;
     @Autowired
     private SequenceMapper sequenceMapper;
+    @Autowired
+    private StockLogMapper stockLogMapper;
 
     @Override
     @Transactional
-    public OrderModel createOrder(Integer userId, Integer itemId, Integer promoId, Integer amount) throws BusinessException {
+    public OrderModel createOrder(Integer userId, Integer itemId, Integer promoId, Integer amount, String stockLogId) throws BusinessException {
         System.out.println("订单服务===> userId:" + userId + ",itemId:" + itemId + ",amount:" + amount);
         //校验下单状态，下单的商品是否存在，用户是否合法，购买数量是否正确
         //ItemModel itemModel = itemService.getIemById(itemId);
@@ -86,6 +92,28 @@ public class OrderServiceImpl implements OrderService {
         orderMapper.insertSelective(order);  //数据入库
         //修改商品销量
         itemService.increaseSales(itemId,amount);
+
+        //设置库存流水状态为成功
+        StockLog stockLog = stockLogMapper.selectByPrimaryKey(stockLogId);
+        if (stockLog == null) {
+            throw new BusinessException(EmBusinessErr.UNKNOW_ERROR);
+        }
+        stockLog.setState(2);
+        stockLogMapper.updateByPrimaryKeySelective(stockLog);
+
+  /*      TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
+            @Override
+            public void afterCommit() {
+                //异步更新库存
+                boolean mqResult = itemService.asyncDecreaseStock(itemId, amount);
+                *//*if (!mqResult) {
+                    //回滚redis的库存
+                    itemService.increaseStock(itemId,amount);
+                    throw new BusinessException(EmBusinessErr.MQ_SEND_FAIL);
+                }*//*
+            }
+        });*/
+
         //返回前端
         return orderModel;
     }
