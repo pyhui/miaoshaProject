@@ -109,7 +109,7 @@ public class MqProducer {
         argsMap.put("userId",userId);
         argsMap.put("promoId",promoId);
         argsMap.put("stockLogId",stockLogId);
-        Message message = new Message(topicName,"increase",
+        Message message = new Message(topicName,"decreaseStock",
                 JSON.toJSON(bodyMap).toString().getBytes(Charset.forName("UTF-8")));
         TransactionSendResult sendResult = null;
         try {

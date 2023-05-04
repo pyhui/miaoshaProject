@@ -1,6 +1,7 @@
 package com.miaoshaproject.mq;
 
 import com.alibaba.fastjson.JSON;
+import com.miaoshaproject.dao.ItemMapper;
 import com.miaoshaproject.dao.ItemStockMapper;
 import org.apache.rocketmq.client.consumer.DefaultMQPushConsumer;
 import org.apache.rocketmq.client.consumer.listener.ConsumeConcurrentlyContext;
@@ -29,6 +30,8 @@ public class MqConsumer {
 
     @Autowired
     private ItemStockMapper itemStockMapper;
+    @Autowired
+    private ItemMapper itemMapper;
 
     @PostConstruct
     public void init() throws MQClientException {
@@ -47,6 +50,7 @@ public class MqConsumer {
                 Integer amount = (Integer) map.get("amount");
 
                 itemStockMapper.decreaseStock(itemId,amount);
+                itemMapper.increaseSales(itemId,amount);
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });

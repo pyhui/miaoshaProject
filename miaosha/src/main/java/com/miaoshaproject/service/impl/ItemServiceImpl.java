@@ -152,9 +152,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    public boolean increaseSales(Integer id, Integer amount) {
-        int i = itemMapper.increaseSales(id, amount);
-        return i > 0 ? true : false;
+    public boolean increaseSales(Integer itemId, Integer amount) {
+        //int i = itemMapper.increaseSales(id, amount);
+        redisTemplate.opsForValue().increment("promo_item_sales_" + itemId, amount.intValue());
+        return true;
     }
 
     //初始化库存流水
