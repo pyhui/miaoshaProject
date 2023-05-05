@@ -122,11 +122,10 @@
 
 			$.ajax({
 				type:"POST",
-				url:"http://"+g_host+"/order/createorder?token="+token,
+				url:"http://"+g_host+"/order/generatetoken?token="+token,
 				contentType: "application/x-www-form-urlencoded",
 				data:{
 					"itemId":g_itemVO.id,
-					"amount":1,
 					"promoId":g_itemVO.promoId
 				},
 				//允许跨域请求
@@ -134,17 +133,48 @@
 				crossDomain:true,
 				success:function(data){
 					if(data.status == "success"){
-						alert("下单成功");
-					}else{
-						alert("下单失败，原因为111"+data.data.errMsg);
-						if(data.data.errCode == 20003) {
-							window.location.href="login.html";
+						var promoToken = data.data;
+
+						$.ajax({
+							type:"POST",
+							url:"http://"+g_host+"/order/createorder?token="+token,
+							contentType: "application/x-www-form-urlencoded",
+							data:{
+								"itemId":g_itemVO.id,
+								"amount":1,
+								"promoId":g_itemVO.promoId,
+								"promoToken":promoToken
+							},
+							//允许跨域请求
+							xhrFields:{withCredentials:true},
+							crossDomain:true,
+							success:function(data){
+							if(data.status == "success"){
+								alert("下单成功");
+							}else{
+								alert("下单失败，原因为111"+data.data.errMsg);
+								if(data.data.errCode == 20003) {
+									window.location.href="login.html";
+								}
+							}
+
+						},
+						error:function(data){
+							alert("下单失败，原因为222"+data.responseText);
 						}
+
+						});
+
+					}else{
+						alert("获取令牌失败，原因为111"+data.data.errMsg);
+						if(data.data.errCode == 20003) {
+									window.location.href="login.html";
+								}
 					}
 
 				},
 				error:function(data){
-					alert("下单失败，原因为222"+data.responseText);
+					alert("获取令牌失败，原因为222"+data.responseText);
 
 				}
 
