@@ -14,7 +14,9 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
+import java.util.concurrent.*;
 
 @Controller("order")
 @RequestMapping("/order")
@@ -32,6 +34,13 @@ public class OrderController extends BaseController {
     private ItemService itemService;
     @Autowired
     private PromoService promoService;
+
+    private ExecutorService executorService;
+
+    @PostConstruct
+    public void init() {
+        executorService = Executors.newFixedThreadPool(20);
+    }
 
     //生成秒杀令牌
     @RequestMapping(value = "/generatetoken",method = {RequestMethod.POST},consumes = {CONTENT_TYPE_FORMED})
@@ -94,16 +103,34 @@ public class OrderController extends BaseController {
         UserModel login_user = (UserModel) this.httpServletRequest.getSession().getAttribute("LOGIN_USER");*/
 
         //OrderModel orderModel = orderService.createOrder(userModel.getId(), itemId, promoId, amount);
-        //判断库存是否售罄，若对应的key存在，则返回下单失败
+        /*//判断库存是否售罄，若对应的key存在，则返回下单失败 (前置到PromoService.generateSecondKillToken)
         if (redisTemplate.hasKey("promo_item_stock_invalid_" + itemId)) {
             throw new BusinessException(EmBusinessErr.STOCK_NOT_ENOUGH);
-        }
-        //加入库存流水init状态
-        String stockLogId = itemService.initStockLog(itemId, amount);
+        }*/
 
-        //在事务消息中创建订单
-        if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,promoId,amount,stockLogId)) {
-            throw new BusinessException(EmBusinessErr.UNKNOW_ERROR,"下单失败");
+        //同步调用线程池的submit方法
+        //拥塞窗口为20的等待队列，用来队列泄洪
+        Future<Object> future = executorService.submit(new Callable<Object>() {
+
+            @Override
+            public Object call() throws Exception {
+                //加入库存流水init状态
+                String stockLogId = itemService.initStockLog(itemId, amount);
+
+                //在事务消息中创建订单
+                if(!mqProducer.transactionAsyncReduceStock(userModel.getId(),itemId,promoId,amount,stockLogId)) {
+                    throw new BusinessException(EmBusinessErr.UNKNOW_ERROR,"下单失败");
+                }
+                return null;
+            }
+        });
+
+        try {
+            future.get();
+        } catch (InterruptedException e) {
+            throw new BusinessException(EmBusinessErr.UNKNOW_ERROR);
+        } catch (ExecutionException e) {
+            throw new BusinessException(EmBusinessErr.UNKNOW_ERROR);
         }
 
         return CommonReturnType.create(null);
