@@ -65,6 +65,14 @@
 				立即购买
 			</button>
 		</div>
+
+		<div id="verifyDiv" style="display: none;" class="form-actions">
+			<img src=""/>
+			<input type="text" id="verifyContent" value=""/>
+			<button class="btn blue" id="verifyButton" type="submit">
+				验证
+			</button>
+		</div>
 		
 	</div>
 </body>
@@ -111,22 +119,16 @@
 
 			});
 
-
-		$("#createorder").on("click",function(){
-			var token = window.localStorage["token"];
-			if (token == null) {
-				alert("用户未登录，不能下单");
-				window.location.href="login.html";
-				return false;
-			}
-
-			$.ajax({
+		$("#verifyButton").on("click",function(){
+				var token = window.localStorage["token"];
+				$.ajax({
 				type:"POST",
 				url:"http://"+g_host+"/order/generatetoken?token="+token,
 				contentType: "application/x-www-form-urlencoded",
 				data:{
 					"itemId":g_itemVO.id,
-					"promoId":g_itemVO.promoId
+					"promoId":g_itemVO.promoId,
+					"verifyCode":$("#verifyContent").val()
 				},
 				//允许跨域请求
 				xhrFields:{withCredentials:true},
@@ -168,21 +170,30 @@
 					}else{
 						alert("获取令牌失败，原因为111"+data.data.errMsg);
 						if(data.data.errCode == 20003) {
-									window.location.href="login.html";
-								}
+							window.location.href="login.html";
+						}
 					}
-
 				},
 				error:function(data){
 					alert("获取令牌失败，原因为222"+data.responseText);
-
 				}
-
 			});
+		});
+
+		$("#createorder").on("click",function(){
+			var token = window.localStorage["token"];
+			if (token == null) {
+				alert("用户未登录，不能下单");
+				window.location.href="login.html";
+				return false;
+			}
+
+			$("#verifyDiv img").attr("src","http://"+g_host+"/order/generateverifycode?token="+token);
+			$("#verifyDiv").show();
 		});
 			
 			//return false;
-		});
+	});
 
 	function reloadDom(){
 		$("#title").text(g_itemVO.title);
