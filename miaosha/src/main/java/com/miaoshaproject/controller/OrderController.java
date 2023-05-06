@@ -1,5 +1,6 @@
 package com.miaoshaproject.controller;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.miaoshaproject.Util.CodeUtil;
 import com.miaoshaproject.error.BusinessException;
 import com.miaoshaproject.error.EmBusinessErr;
@@ -43,9 +44,14 @@ public class OrderController extends BaseController {
 
     private ExecutorService executorService;
 
+    private RateLimiter orderCreateRateLimiter;
+
     @PostConstruct
     public void init() {
+        //初始线程池线程数
         executorService = Executors.newFixedThreadPool(20);
+        //初始令牌数量
+        orderCreateRateLimiter = RateLimiter.create(300);
     }
 
     //生成验证码
@@ -113,6 +119,11 @@ public class OrderController extends BaseController {
                                         @RequestParam(name = "amount") Integer amount,
                                         @RequestParam(name = "promoId", required = false) Integer promoId,
                                         @RequestParam(name = "promoToken", required = false) String promoToken) throws BusinessException {
+        //判断当前令牌是否足够
+        if (!orderCreateRateLimiter.tryAcquire()) {
+            throw new BusinessException(EmBusinessErr.RATELIMIT);
+        }
+
         //获取用户的登录信息
         //Boolean is_login = (Boolean) this.httpServletRequest.getSession().getAttribute("IS_LOGIN");
         String token = httpServletRequest.getParameterMap().get("token")[0];
